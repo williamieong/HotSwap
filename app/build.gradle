@@ -52,6 +52,11 @@ dependencies {
     compile 'com.android.support:design:26.1.0'
     compile 'com.firebase:firebase-client-android:2.5.2+'
     compile 'com.facebook.android:facebook-android-sdk:[4,5)'
+
+    // Dependencies for messaging
+    compile 'com.github.stfalcon:chatkit:0.2.2'
+    compile 'com.squareup.picasso:picasso:2.5.2'
 }
+
 
 apply plugin: 'com.google.gms.google-services'
