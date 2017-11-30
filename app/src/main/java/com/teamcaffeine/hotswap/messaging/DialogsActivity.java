@@ -35,6 +35,11 @@ public abstract class DialogsActivity extends AppCompatActivity
     public void onDialogLongClick(Dialog dialog) {
         AppUtils.showToast(this, dialog.getDialogName(),false);
     }
+
+    @Override
+    public void onDialogClick(Dialog dialog) {
+        MessagesActivity.open(this);
+    }
 }
 
 

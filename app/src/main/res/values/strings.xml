@@ -76,4 +76,5 @@
     <string name="hello_blank_fragment">First Blank Fragment</string>
     <string name="hello_blank_fragment2">XDDDDD</string>
     <string name="title_activity_test">Test</string>
+    <string name="title_activity_messages">MessagesActivity</string>
 </resources>

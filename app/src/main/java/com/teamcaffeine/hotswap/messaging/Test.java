@@ -15,36 +15,46 @@ import com.stfalcon.chatkit.dialogs.DialogsListAdapter;
 
 import com.teamcaffeine.hotswap.R;
 import com.teamcaffeine.hotswap.messaging.model.Dialog;
+import com.teamcaffeine.hotswap.messaging.utils.AppUtils;
 
 import java.util.ArrayList;
 
 import static com.teamcaffeine.hotswap.messaging.fixtureData.DialogsFixtures.getDialogs;
 
-public class Test extends AppCompatActivity {
+public class Test extends AppCompatActivity implements DialogsListAdapter.OnDialogClickListener<Dialog>{
 
     DialogsList dialogsListView;
     DialogsListAdapter dialogsListAdapter;
+    ArrayList<Dialog> dialogs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_test);
 
-        ArrayList<Dialog> dialogs = getDialogs();
+        dialogs = getDialogs();
 
         DialogsListAdapter dialogsListAdapter = new DialogsListAdapter<>(new ImageLoader() {
             @Override
             public void loadImage(ImageView imageView, String url) {
                 //If you using another library - write here your way to load image
-                Picasso.with(Test.this).load(url).into(imageView);x
+                Picasso.with(Test.this).load(url).into(imageView);
             }
         });
 
         dialogsListView = (DialogsList) findViewById(R.id.dialogsList);
         dialogsListView.setAdapter(dialogsListAdapter);
         dialogsListAdapter.addItems(dialogs);
-
+        dialogsListAdapter.setOnDialogClickListener(this);
 
     }
+
+    @Override
+    public void onDialogClick(Dialog dialog) {
+        AppUtils.showToast(this, "Click activated for " + dialog.getDialogName(),false);
+        MessagesActivity.open(this);
+    }
+
+
 
 }
