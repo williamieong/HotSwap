@@ -22,9 +22,7 @@ package com.teamcaffeine.hotswap.navigation;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -72,7 +70,6 @@ public class ChatFragment extends Fragment implements DialogsListAdapter.OnDialo
     private List<Dialog> dialogs = new ArrayList<>();
     private ProgressDialog progressDialog;
     private DatabaseReference userRef;
-    private Handler mHandler;
     private DialogsList dialogsList;
     private ChatFragmentListener CFL;
     private String TAG = "Chat Fragment Tag";
@@ -143,11 +140,6 @@ public class ChatFragment extends Fragment implements DialogsListAdapter.OnDialo
      * Kill Silently
      */
     private void killSilently() {
-        /* Remove Callbacks */
-        if (mHandler != null) {
-            mHandler.removeCallbacks(mStatusChecker);
-        }
-
         /* Online Status */
         if (null != userRef) {
             userRef.removeValue();
@@ -156,51 +148,31 @@ public class ChatFragment extends Fragment implements DialogsListAdapter.OnDialo
     }
 
     /**
-     * Retrieve User State
+     *  Set the user online/offline status for all the users chats
      */
-    public class UpdateUserState extends AsyncTask<Void, Void, Void> {
-        /**
-         * Perform In Background
-         *
-         * @param voids Void
-         */
-        protected Void doInBackground(Void... voids) {
-            for (int i = 0; i < dialogs.size(); i++) {
-                final Dialog dialog = dialogs.get(i);
-                FirebaseDatabase.getInstance().getReference().child("presence").child(dialog.getUsers().get(0).getEmail().replace('.','|')).addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        if (dataSnapshot.exists()) {
-                            dialog.getUsers().get(0).setOnline(true);
-                        } else {
-                            dialog.getUsers().get(0).setOnline(false);
-                        }
-                        getDialog(dialog.getUsers().get(0).getEmail(), dialog);
+    private void updateUserStates() {
+        // TODO: Do we need to null check for dialogs?
+        for (int i = 0; i < dialogs.size(); i++) {
+            final Dialog dialog = dialogs.get(i);
+            FirebaseDatabase.getInstance().getReference().child("presence").child(dialog.getUsers().get(0).getEmail().replace('.','|')).addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    if (dataSnapshot.exists()) {
+                        dialog.getUsers().get(0).setOnline(true);
+                    } else {
+                        dialog.getUsers().get(0).setOnline(false);
                     }
+                    getDialog(dialog.getUsers().get(0).getEmail(), dialog);
+                }
 
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-                        /* Do Nothing */
-                    }
-                });
-            }
-            return null;
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    /* Do Nothing */
+                }
+            });
         }
     }
 
-    /* Update Online Status */
-    Runnable mStatusChecker = new Runnable() {
-        @Override
-        public void run() {
-            try {
-                new UpdateUserState().execute().get();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            } finally {
-                mHandler.postDelayed(mStatusChecker, 2500);
-            }
-        }
-    };
 
     @Override
     public void onDialogClick(Dialog dialog) {
@@ -234,6 +206,7 @@ public class ChatFragment extends Fragment implements DialogsListAdapter.OnDialo
         dialogsAdapter.setOnDialogLongClickListener(this);
         dialogsAdapter.setDatesFormatter(this);
         dialogsList.setAdapter(dialogsAdapter);
+        updateUserStates();
     }
 
     /**
@@ -252,8 +225,7 @@ public class ChatFragment extends Fragment implements DialogsListAdapter.OnDialo
                         getDialog(subscriptionChannel, null);
                     }
                     /* Update Online Status */
-                    mHandler = new Handler();
-                    mStatusChecker.run();
+                    updateUserStates();
 
                 }
 
