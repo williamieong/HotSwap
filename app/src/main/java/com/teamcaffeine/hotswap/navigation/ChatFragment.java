@@ -151,7 +151,7 @@ public class ChatFragment extends Fragment implements DialogsListAdapter.OnDialo
      *  Set the user online/offline status for all the users chats
      */
     private void updateUserStates() {
-        // TODO: Do we need to null check for dialogs?
+        // TODO: Do we need to null check for dialogs? Also do it stack listeners or replace them?
         for (int i = 0; i < dialogs.size(); i++) {
             final Dialog dialog = dialogs.get(i);
             FirebaseDatabase.getInstance().getReference().child("presence").child(dialog.getUsers().get(0).getEmail().replace('.','|')).addValueEventListener(new ValueEventListener() {
@@ -206,7 +206,6 @@ public class ChatFragment extends Fragment implements DialogsListAdapter.OnDialo
         dialogsAdapter.setOnDialogLongClickListener(this);
         dialogsAdapter.setDatesFormatter(this);
         dialogsList.setAdapter(dialogsAdapter);
-        updateUserStates();
     }
 
     /**
@@ -238,6 +237,8 @@ public class ChatFragment extends Fragment implements DialogsListAdapter.OnDialo
                 /* Do Nothing */
             }
         });
+
+//        updateUserStates(); //TODO: TESTING PLEASE
     }
 
     /**
