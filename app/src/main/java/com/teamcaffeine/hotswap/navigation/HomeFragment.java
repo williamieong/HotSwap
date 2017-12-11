@@ -29,12 +29,16 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.teamcaffeine.hotswap.login.User;
+import com.teamcaffeine.hotswap.messaging.StyledMessagesActivity;
 import com.teamcaffeine.hotswap.swap.ListItemActivity;
 import com.teamcaffeine.hotswap.R;
 import com.teamcaffeine.hotswap.swap.Item;
+import com.teamcaffeine.hotswap.swap.Transaction;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -365,5 +369,105 @@ public class HomeFragment extends Fragment {
         super.onResume();
         // using the reference to the items table, add the listener
         items.addValueEventListener(itemsEventListener);
+    }
+
+    private void sendMessage(final String message, String destinationUserID) {
+        DatabaseReference users = FirebaseDatabase.getInstance().getReference().child("users");
+        users.child(destinationUserID).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                String destinationEmail;
+                if (dataSnapshot.exists()) {
+                    User destinationUser = dataSnapshot.getValue(User.class);
+                    destinationEmail = destinationUser.getEmail();
+
+                    Intent intent = new Intent(getActivity(), StyledMessagesActivity.class); //TODO: is this the right context
+                    intent.putExtra("channel", FirebaseAuth.getInstance().getCurrentUser().getEmail());
+                    intent.putExtra("subscription", destinationEmail);
+                    intent.putExtra("initialMessage", message);
+                    startActivity(intent);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, databaseError.getMessage());
+            }
+        });
+
+    }
+
+    // TODO: Need to switch database reference and need to change paramters and objects im putting into database
+    private void onConfirmTransaction(final Transaction transaction, final Item item, final String renterID, final Date date) {
+        final DatabaseReference users = FirebaseDatabase.getInstance().getReference().child("users");
+        final DatabaseReference items = FirebaseDatabase.getInstance().getReference().child("items");
+        final String activeTransitionKey = "temp";
+
+        // Set the transaction's confirmed field to false to true
+        // We pull the item, because it may have changed since the time we pulled it in
+        items.child(item.getItemID()).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                //TODO: Better name?
+                if (dataSnapshot.exists()) {
+                    Item currentItem = dataSnapshot.getValue(Item.class);
+                    for(Transaction mTransaction: currentItem.getTransactions()) {
+                        if (transaction.equals(mTransaction)) {
+                            mTransaction.setConfirmed(true);
+                            break;
+                        }
+                    }
+
+                    // Update database with the new item
+                    items.child(item.getItemID()).updateChildren(currentItem.toMap());
+                    // Now do the rest here
+
+                    // Notify the renter via message that the owner has approved the transaction
+                    String confirmationString = "I have confirmed the request for " + item.getName() + " for " + date.toString();
+                    sendMessage(confirmationString, renterID);
+
+                    // Update the renter user to have a new pending item
+                    users.child(renterID).child("pending").child(activeTransitionKey).setValue(item);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, databaseError.getMessage());
+            }
+        });
+    }
+
+    // For the renter when they receive the item they wish to rent
+    private void onItemReceived(Item item, String renterID, Date date) {
+        DatabaseReference users = FirebaseDatabase.getInstance().getReference().child("users");
+        String activeTransitionKey = "temp";
+        // Check if the date is valid (i.e is today past the start date of our transaction?)
+        Date today = new Date();
+        if (today.before(date)) {
+            Toast.makeText(getActivity(), "You cannot receive an item before the start date of your rent", Toast.LENGTH_SHORT);
+            return;
+        }
+
+        // Add pending item to the owner user
+        users.child(item.getOwnerID()).child("pending").child(activeTransitionKey).setValue(item); //TODO: REPLACE WITH ACTIVE TRANSACTION
+
+        // Remove pending item from the renter user
+        users.child(renterID).child("pending").child(activeTransitionKey).removeValue(); //TODO: SEE IF REMOVE GOT DEPRECATED
+
+        // Add renting item to the renter user
+        users.child(renterID).child("renting").child(activeTransitionKey).setValue(item); //TODO: REPLACE WITH ACTIVE TRANSACTION
+    }
+
+    // For the lender when they are returned the item they lent
+    private void onItemReturned(Item item, String renterID, Date date) {
+        DatabaseReference users = FirebaseDatabase.getInstance().getReference().child("users");
+        String activeTransitionKey = "temp";
+
+        // Delete item from renting in renter user
+        users.child(renterID).child("renting").child(activeTransitionKey).removeValue();
+
+        // Delete pending from owner user
+        users.child(item.getOwnerID()).child("pending").child(activeTransitionKey).removeValue();
     }
 }
