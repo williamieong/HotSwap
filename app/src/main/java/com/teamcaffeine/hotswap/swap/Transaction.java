@@ -145,4 +145,16 @@ public class Transaction implements Parcelable {
         return getRequestedDates() != null ? getRequestedDates().equals(that.getRequestedDates()) : that.getRequestedDates() == null;
     }
 
+    @Override
+    public int hashCode() {
+        int result;
+        long temp;
+        result = getRequestUserID() != null ? getRequestUserID().hashCode() : 0;
+        result = 31 * result + (getInitialMessage() != null ? getInitialMessage().hashCode() : 0);
+        temp = Double.doubleToLongBits(getDistance());
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        result = 31 * result + (getRequestedDates() != null ? getRequestedDates().hashCode() : 0);
+        result = 31 * result + (isConfirmed() ? 1 : 0);
+        return result;
+    }
 }
