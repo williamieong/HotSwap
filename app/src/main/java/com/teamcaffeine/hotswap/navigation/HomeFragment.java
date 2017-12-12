@@ -28,6 +28,7 @@ import com.teamcaffeine.hotswap.login.User;
 import com.teamcaffeine.hotswap.navigation.homeAdapters.OwnedItemsAdapter;
 import com.teamcaffeine.hotswap.navigation.homeAdapters.RentingPendingItemsAdapter;
 import com.teamcaffeine.hotswap.messaging.StyledMessagesActivity;
+import com.teamcaffeine.hotswap.swap.ActiveTransactionInfo;
 import com.teamcaffeine.hotswap.swap.ListItemActivity;
 import com.teamcaffeine.hotswap.R;
 import com.teamcaffeine.hotswap.swap.Item;
@@ -315,35 +316,35 @@ public class HomeFragment extends Fragment {
     }
 
     // For the renter when they receive the item they wish to rent
-    private void onItemReceived(Item item, String renterID, Date date) {
+    private void onItemReceived(ActiveTransactionInfo activeTransactionInfo) {
         DatabaseReference users = FirebaseDatabase.getInstance().getReference().child("users");
-        String activeTransitionKey = "temp";
+        String activeTransitionKey = activeTransactionInfo.toKey();
         // Check if the date is valid (i.e is today past the start date of our transaction?)
         Date today = new Date();
-        if (today.before(date)) {
+        if (today.before(activeTransactionInfo.getDate())) {
             Toast.makeText(getActivity(), "You cannot receive an item before the start date of your rent", Toast.LENGTH_SHORT);
             return;
         }
 
         // Add pending item to the owner user
-        users.child(item.getOwnerID()).child("pending").child(activeTransitionKey).setValue(item); //TODO: REPLACE WITH ACTIVE TRANSACTION
+        users.child(activeTransactionInfo.getItem().getOwnerID()).child("pending").child(activeTransitionKey).setValue(activeTransactionInfo); //TODO: REPLACE WITH OBJECT OR tOMAP?
 
         // Remove pending item from the renter user
-        users.child(renterID).child("pending").child(activeTransitionKey).removeValue(); //TODO: SEE IF REMOVE GOT DEPRECATED
+        users.child(activeTransactionInfo.getRenterId()).child("pending").child(activeTransitionKey).removeValue(); //TODO: SEE IF REMOVE GOT DEPRECATED
 
         // Add renting item to the renter user
-        users.child(renterID).child("renting").child(activeTransitionKey).setValue(item); //TODO: REPLACE WITH ACTIVE TRANSACTION
+        users.child(activeTransactionInfo.getRenterId()).child("renting").child(activeTransitionKey).setValue(activeTransactionInfo);
     }
 
     // For the lender when they are returned the item they lent
-    private void onItemReturned(Item item, String renterID, Date date) {
+    private void onItemReturned(ActiveTransactionInfo activeTransactionInfo) {
         DatabaseReference users = FirebaseDatabase.getInstance().getReference().child("users");
-        String activeTransitionKey = "temp";
+        String activeTransitionKey = activeTransactionInfo.toKey();
 
         // Delete item from renting in renter user
-        users.child(renterID).child("renting").child(activeTransitionKey).removeValue();
+        users.child(activeTransactionInfo.getRenterId()).child("renting").child(activeTransitionKey).removeValue();
 
         // Delete pending from owner user
-        users.child(item.getOwnerID()).child("pending").child(activeTransitionKey).removeValue();
+        users.child(activeTransactionInfo.getItem().getOwnerID()).child("pending").child(activeTransitionKey).removeValue();
     }
 }
